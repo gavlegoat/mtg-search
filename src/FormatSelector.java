@@ -6,7 +6,7 @@ public class FormatSelector extends JPanel implements ScryfallConstraint {
   private JComboBox<String> legalityBox;
   private JComboBox<String> formatBox;
 
-  public FormatSelector() {
+  FormatSelector() {
     setLayout(new FlowLayout(FlowLayout.LEFT));
 
     String[] legalities = {"Legal", "Banned", "Restricted"};
@@ -24,7 +24,10 @@ public class FormatSelector extends JPanel implements ScryfallConstraint {
     if (formatBox.getSelectedIndex() == 0) {
       return "";
     }
-    String form = formatBox.getSelectedItem().toString().toLowerCase();
+    String form = "";
+    if (formatBox.getSelectedItem() != null) {
+      form = formatBox.getSelectedItem().toString().toLowerCase();
+    }
     switch (legalityBox.getSelectedIndex()) {
       case 0:
         return "f:" + form;

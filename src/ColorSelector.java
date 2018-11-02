@@ -11,7 +11,7 @@ public class ColorSelector extends JPanel implements ScryfallConstraint {
   private JCheckBox gBox;
   private String code;
 
-  public ColorSelector(String c) {
+  ColorSelector(String c) {
     setLayout(new FlowLayout(FlowLayout.LEFT));
 
     code = c;

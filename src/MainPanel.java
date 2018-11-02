@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 
 // This is the "home screen" of the search application
-public class MainPanel extends JPanel {
+class MainPanel extends JPanel {
   private CodeSelector scryfall;
   private CodeSelector nameField;
   private CodeSelector oracleField;
@@ -18,12 +18,13 @@ public class MainPanel extends JPanel {
   private FormatSelector formatField;
   private RaritySelector rarityField;
   private PriceSelector priceField;
-  private CriteriaPanel critPanel;
+  private CollectionManager man;
 
-  public MainPanel() {
+  MainPanel() {
     setPreferredSize(new Dimension(900, 800));
 
-    critPanel = new CriteriaPanel();
+    man = new CollectionManager();
+    CriteriaPanel critPanel = new CriteriaPanel(man);
     scryfall = new CodeSelector("");
     nameField = new CodeSelector("");
     oracleField = new CodeSelector("o");
@@ -75,13 +76,13 @@ public class MainPanel extends JPanel {
     ScryfallConstraint[] fields = {scryfall, nameField, oracleField, typeField,
             colors, colorID, manaField, formatField, statField, setField,
             blockField, rarityField, priceField, artisttField, flavorField};
-    String ret = "";
+    StringBuilder ret = new StringBuilder("");
     for (ScryfallConstraint f : fields) {
       String q = f.createQuery();
       if (!q.equals("")) {
-        ret += "(" + q + ") ";
+        ret.append("(").append(q).append(") ");
       }
     }
-    return ret.trim();
+    return ret.toString().trim();
   }
 }

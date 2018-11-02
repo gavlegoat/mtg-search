@@ -1,5 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.LinkedList;
 
 // Maintains a list of criteria added from the StatSelector. This panel also
@@ -8,8 +11,11 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
   private JProgressBar pb;
   private JTextField usernameField;
   private java.util.List<String> searchStrings;
+  private CollectionManager man;
 
-  public CriteriaPanel() {
+  CriteriaPanel(CollectionManager cm) {
+    man = cm;
+
     // This progress bar is used when the user's collection is loaded from
     // Deckbox
     pb = new JProgressBar(0, 100);
@@ -53,7 +59,7 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
 
   // Add a new constraint. Here disp is the string to display and search is
   // the constraint rendered as a Scryfall search string
-  public void addRow(String disp, String search) {
+  void addRow(String disp, String search) {
     JPanel newPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     newPanel.add(new JLabel(disp));
     JButton remove = new JButton("Remove");
@@ -72,25 +78,40 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
 
   @Override
   public String createQuery() {
-    String ret = "";
+    StringBuilder ret = new StringBuilder("");
     for (String s : searchStrings) {
-      ret += s + " ";
+      ret.append(s).append(" ");
     }
-    return ret.trim();
+    return ret.toString().trim();
   }
 
   // This task loads the user's collection
-  private class Task extends SwingWorker<Void, Void> {
+  private class Task extends SwingWorker<Boolean, Void> {
     private JFrame frame;
 
-    public Task(JFrame frame) {
+    Task(JFrame frame) {
       this.frame = frame;
     }
 
     @Override
-    protected Void doInBackground() {
-      // TODO
-      return null;
+    protected Boolean doInBackground() {
+      int i = 0;
+      int pages = 1;
+      while (pages != 0) {
+        File dir = new File("cache");
+        if (!dir.exists()) {
+          dir.mkdir();
+        }
+        try {
+          pages = man.loadCollection(usernameField.getText(), i,
+                  "cache/" + usernameField.getText());
+        } catch (IOException e) {
+          return false;
+        }
+        setProgress((i * 100) / pages);
+        i++;
+      }
+      return true;
     }
 
     @Override
