@@ -26,7 +26,7 @@ class CollectionManager {
   // number of pages in the collection if there are more pages to be read.
   // Otherwise, return 0 to indicate that we're finished. This set up allows
   // for a progress bar.
-  int loadCollection(String un, int page, String fn) {
+  int loadCollection(String un, int page) {
     username = un;
     String url = "https://deckbox-api.herokuapp.com/api/users/" + username + "/inventory";
     String charset = StandardCharsets.UTF_8.name();
@@ -106,6 +106,7 @@ class CollectionManager {
     if (page >= pages) {
       loaded = true;
       try {
+        String fn = "cache/" + username;
         FileOutputStream fos = new FileOutputStream(fn);
         ObjectOutputStream oos = new ObjectOutputStream(fos);
         oos.writeObject(collection);
@@ -119,5 +120,49 @@ class CollectionManager {
     } else {
       return pages;
     }
+  }
+
+  // If the collection is not loaded, load it from a local cache. If no such
+  // cache exists, return false to indicate that the collection needs to be
+  // loaded from Deckbox
+  @SuppressWarnings("unchecked")
+  boolean loadLocal() {
+    if (loaded) {
+      // The collection is already loaded
+      return true;
+    }
+    File dir = new File("cache");
+    if (!dir.exists()) {
+      return false;
+    }
+    File cached = new File("cache/" + username);
+    if (!cached.exists()) {
+      return false;
+    }
+    ObjectInputStream ois;
+    try {
+      ois = new ObjectInputStream(new FileInputStream(cached));
+    } catch (FileNotFoundException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: File not found after check");
+      return false;
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: IOException while opening cache");
+      return false;
+    }
+    try {
+      Object inpObj = ois.readObject();
+      try {
+        collection = (HashMap<String, Card>) inpObj;
+      } catch (ClassCastException e) {
+        JOptionPane.showMessageDialog(null, "Internal error: Cast exception while reading cache");
+      }
+    } catch (ClassNotFoundException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: ClassNotFound while reading cache");
+      return false;
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: IOException while reading cache");
+      return false;
+    }
+    return true;
   }
 }

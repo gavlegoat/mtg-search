@@ -102,12 +102,7 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
         if (!dir.exists()) {
           dir.mkdir();
         }
-        try {
-          pages = man.loadCollection(usernameField.getText(), i,
-                  "cache/" + usernameField.getText());
-        } catch (IOException e) {
-          return false;
-        }
+        pages = man.loadCollection(usernameField.getText(), i);
         setProgress((i * 100) / pages);
         i++;
       }

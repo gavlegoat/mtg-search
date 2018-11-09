@@ -5,11 +5,14 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 // Holds the results of a search
 class ResultsFrame extends JFrame {
   private CollectionManager man;
   private String queryStr;
+  private String nextPageURL;
+  private List<Card> results;
 
   ResultsFrame(String q, CollectionManager cm) {
     man = cm;
@@ -17,6 +20,10 @@ class ResultsFrame extends JFrame {
   }
 
   boolean prepare() {
+    boolean loaded = man.loadLocal();
+    if (!loaded) {
+      // TODO: Load from Deckbox
+    }
     // Send the search to Scryfall
     String url = "https://api.scryfall.com/cards/search/";
     String charset = StandardCharsets.UTF_8.name();
@@ -69,11 +76,15 @@ class ResultsFrame extends JFrame {
     }
     JSONObject obj = new JSONObject(content);
 
+    // At this point obj has the first page of results
+
     // TODO
     // Get pages from the result and cross reference the loaded collection until
     //   There are enough results to fill a page.
     // Keep track of the current page and index into the page to use when the
     //   user wants to move to the next page of results
     // Also store all previous pages so the user can go back quickly
+
+    return true;
   }
 }

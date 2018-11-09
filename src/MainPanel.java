@@ -62,8 +62,12 @@ class MainPanel extends JPanel {
     submit.addActionListener(e -> {
       ResultsFrame rf = new ResultsFrame(createQuery(), man);
       boolean prepared = rf.prepare();
-      // TODO: Handle exceptions
-      rf.setVisible(true);
+      if (prepared) {
+        rf.setVisible(true);
+      } else {
+        // An error occured and an error message was displayed
+        rf.dispose();
+      }
     });
 
     setLayout(new BorderLayout(30, 20));
