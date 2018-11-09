@@ -60,9 +60,10 @@ class MainPanel extends JPanel {
 
     JButton submit = new JButton("Submit");
     submit.addActionListener(e -> {
-      System.out.println("<<<" + createQuery() + ">>>");
-      //ResultsFrame rf = new ResultsFrame(createQuery());
-      //rf.setVisible(true);
+      ResultsFrame rf = new ResultsFrame(createQuery(), man);
+      boolean prepared = rf.prepare();
+      // TODO: Handle exceptions
+      rf.setVisible(true);
     });
 
     setLayout(new BorderLayout(30, 20));

@@ -1,23 +1,18 @@
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectOutputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
+import javax.swing.*;
+import java.io.*;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Scanner;
 
 // This class manages a user's collection. All queries to the user's collection
 // go through this class, and it decides when to reload the collection from
 // Deckbox.
 class CollectionManager {
   private String username;
-  private HashMap<String,HashMap<String,Integer>> collection;
+  private HashMap<String,Card> collection;
   private boolean loaded;
 
   CollectionManager() {
@@ -31,18 +26,65 @@ class CollectionManager {
   // number of pages in the collection if there are more pages to be read.
   // Otherwise, return 0 to indicate that we're finished. This set up allows
   // for a progress bar.
-  int loadCollection(String un, int page, String fn) throws IOException {
+  int loadCollection(String un, int page, String fn) {
     username = un;
     String url = "https://deckbox-api.herokuapp.com/api/users/" + username + "/inventory";
     String charset = StandardCharsets.UTF_8.name();
-    String query = String.format("page=%s",
-            URLEncoder.encode(Integer.toString(page), charset));
-    URLConnection con = new URL(url + "?" + query).openConnection();
+    String query;
+    try {
+      query = String.format("page=%s",
+              URLEncoder.encode(Integer.toString(page), charset));
+    } catch (UnsupportedEncodingException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: Unsupported encoding");
+      loaded = false;
+      return 0;
+    }
+    HttpURLConnection con;
+    try {
+      con = (HttpURLConnection) (new URL(url + "?" + query).openConnection());
+    } catch (MalformedURLException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: Malformed URL");
+      loaded = false;
+      return 0;
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "An error occured while connecting to Deckbox");
+      loaded = false;
+      return 0;
+    }
+    try {
+      con.setRequestMethod("GET");
+    } catch (ProtocolException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: Protocol error");
+      loaded = false;
+      return 0;
+    }
     con.setRequestProperty("Accept-Charset", charset);
-    InputStream response = con.getInputStream();
-    Scanner scanner = new Scanner(response, charset);
-    String content = scanner.useDelimiter("\\A").next();
-    scanner.close();
+    try {
+      con.connect();
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "An error occured while connecting to Deckbox");
+      loaded = false;
+      return 0;
+    }
+    int responseCode = -1;
+    try {
+      responseCode = con.getResponseCode();
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "An error occured while reading the response from Deckbox");
+    }
+    if (responseCode != HttpURLConnection.HTTP_OK) {
+      JOptionPane.showMessageDialog(null, "Error connecting to Deckbox: " + responseCode);
+      loaded = false;
+      return 0;
+    }
+    String content;
+    try {
+      content = con.getResponseMessage();
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "An error occured while reading the response from Deckbox");
+      loaded = false;
+      return 0;
+    }
     JSONObject obj = new JSONObject(content);
     JSONArray cards = obj.getJSONArray("items");
     for (int i = 0; i < cards.length(); i++) {
@@ -51,33 +93,27 @@ class CollectionManager {
       String setName = card.getString("set");
       int count = card.getInt("count");
       if (collection.containsKey(cardName)) {
-        if (collection.get(cardName).containsKey(setName)) {
-          int existing = collection.get(cardName).get(setName);
-          collection.get(cardName).replace(setName, existing + count);
-        } else {
-          collection.get(cardName).put(setName, count);
-        }
+        collection.get(cardName).addSet(setName, count);
       } else {
         HashMap<String,Integer> newMap = new HashMap<>();
         newMap.put(setName, count);
-        collection.put(cardName, newMap);
+        Card newCard = new Card(cardName, newMap);
+        collection.put(cardName, newCard);
       }
     }
 
     int pages = obj.getInt("total_pages");
     if (page >= pages) {
       loaded = true;
-      FileOutputStream fos = new FileOutputStream(fn);
-      ObjectOutputStream oos = new ObjectOutputStream(fos);
-      oos.writeObject(collection);
-      oos.close();
-      fos.close();
-      for (String k : collection.keySet()) {
-        int total = 0;
-        for (String k2 : collection.get(k).keySet()) {
-          total += collection.get(k).get(k2);
-        }
-        System.out.println(k + ": " + total);
+      try {
+        FileOutputStream fos = new FileOutputStream(fn);
+        ObjectOutputStream oos = new ObjectOutputStream(fos);
+        oos.writeObject(collection);
+        oos.close();
+        fos.close();
+      } catch (IOException e) {
+        JOptionPane.showMessageDialog(null,
+                "Unable to cache collection (collection was still loaded)");
       }
       return 0;
     } else {
