@@ -61,8 +61,13 @@ class MainPanel extends JPanel {
     JButton submit = new JButton("Submit");
     submit.addActionListener(e -> {
       ResultsFrame rf = new ResultsFrame(createQuery(), man);
+      rf.setVisible(false);
+      man.setUsername(critPanel.getUsername());
       boolean prepared = rf.prepare();
       if (prepared) {
+        if (!rf.setContents(0)) {
+          rf.dispose();
+        }
         rf.setVisible(true);
       } else {
         // An error occured and an error message was displayed
@@ -81,7 +86,7 @@ class MainPanel extends JPanel {
     ScryfallConstraint[] fields = {scryfall, nameField, oracleField, typeField,
             colors, colorID, manaField, formatField, statField, setField,
             blockField, rarityField, priceField, artisttField, flavorField};
-    StringBuilder ret = new StringBuilder("");
+    StringBuilder ret = new StringBuilder();
     for (ScryfallConstraint f : fields) {
       String q = f.createQuery();
       if (!q.equals("")) {

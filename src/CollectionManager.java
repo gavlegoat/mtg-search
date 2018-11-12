@@ -1,11 +1,15 @@
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Map;
 
 // This class manages a user's collection. All queries to the user's collection
 // go through this class, and it decides when to reload the collection from
@@ -14,11 +18,22 @@ class CollectionManager {
   private String username;
   private HashMap<String,Card> collection;
   private boolean loaded;
+  private Image defaultImage;
 
   CollectionManager() {
     username = "";
     collection = new HashMap<>();
     loaded = false;
+    try {
+      BufferedImage original = ImageIO.read(new File("src/unh-17-look-at-me-i-m-r-d.jpg"));
+      defaultImage = original.getScaledInstance(366, 510, Image.SCALE_DEFAULT);
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: Failed to load the default image");
+    }
+  }
+
+  void setUsername(String u) {
+    username = u;
   }
 
   // Load one page of the user's collection from Deckbox. Append that data to
@@ -26,8 +41,7 @@ class CollectionManager {
   // number of pages in the collection if there are more pages to be read.
   // Otherwise, return 0 to indicate that we're finished. This set up allows
   // for a progress bar.
-  int loadCollection(String un, int page) {
-    username = un;
+  int loadCollection(int page) {
     String url = "https://deckbox-api.herokuapp.com/api/users/" + username + "/inventory";
     String charset = StandardCharsets.UTF_8.name();
     String query;
@@ -66,11 +80,13 @@ class CollectionManager {
       loaded = false;
       return 0;
     }
-    int responseCode = -1;
+    int responseCode;
     try {
       responseCode = con.getResponseCode();
     } catch (IOException e) {
       JOptionPane.showMessageDialog(null, "An error occured while reading the response from Deckbox");
+      loaded = false;
+      return 0;
     }
     if (responseCode != HttpURLConnection.HTTP_OK) {
       JOptionPane.showMessageDialog(null, "Error connecting to Deckbox: " + responseCode);
@@ -79,7 +95,14 @@ class CollectionManager {
     }
     String content;
     try {
-      content = con.getResponseMessage();
+      BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+      StringBuilder sb = new StringBuilder();
+      String inputLine = in.readLine();
+      while (inputLine != null) {
+        sb.append(inputLine);
+        inputLine = in.readLine();
+      }
+      content = sb.toString();
     } catch (IOException e) {
       JOptionPane.showMessageDialog(null, "An error occured while reading the response from Deckbox");
       loaded = false;
@@ -92,12 +115,15 @@ class CollectionManager {
       String cardName = card.getString("name");
       String setName = card.getString("set");
       int count = card.getInt("count");
+      String imageURL = card.getJSONObject("images").getString("large");
       if (collection.containsKey(cardName)) {
-        collection.get(cardName).addSet(setName, count);
+        collection.get(cardName).addSet(setName, count, imageURL);
       } else {
-        HashMap<String,Integer> newMap = new HashMap<>();
+        HashMap<String, Integer> newMap = new HashMap<>();
         newMap.put(setName, count);
-        Card newCard = new Card(cardName, newMap);
+        HashMap<String, String> imageMap = new HashMap<>();
+        imageMap.put(setName, imageURL);
+        Card newCard = new Card(cardName, newMap, imageMap, defaultImage);
         collection.put(cardName, newCard);
       }
     }
@@ -105,13 +131,22 @@ class CollectionManager {
     int pages = obj.getInt("total_pages");
     if (page >= pages) {
       loaded = true;
+      JSONObject topLevel = new JSONObject();
+      topLevel.put("username", username);
+      topLevel.put("num_cards", collection.size());
+      JSONArray data = new JSONArray();
+      for (String k : collection.keySet()) {
+        JSONArray cardArray = collection.get(k).getJSONRepresentation();
+        for (int i = 0; i < cardArray.length(); i++) {
+          data.put(cardArray.get(i));
+        }
+      }
+      topLevel.put("data", data);
       try {
         String fn = "cache/" + username;
-        FileOutputStream fos = new FileOutputStream(fn);
-        ObjectOutputStream oos = new ObjectOutputStream(fos);
-        oos.writeObject(collection);
-        oos.close();
-        fos.close();
+        FileWriter fw = new FileWriter(fn);
+        fw.write(topLevel.toString());
+        fw.close();
       } catch (IOException e) {
         JOptionPane.showMessageDialog(null,
                 "Unable to cache collection (collection was still loaded)");
@@ -135,34 +170,53 @@ class CollectionManager {
     if (!dir.exists()) {
       return false;
     }
-    File cached = new File("cache/" + username);
-    if (!cached.exists()) {
+    File cache = new File("cache/" + username);
+    if (!cache.exists()) {
       return false;
     }
-    ObjectInputStream ois;
+    BufferedReader fr;
     try {
-      ois = new ObjectInputStream(new FileInputStream(cached));
+      fr = new BufferedReader(new FileReader(cache));
     } catch (FileNotFoundException e) {
-      JOptionPane.showMessageDialog(null, "Internal error: File not found after check");
-      return false;
-    } catch (IOException e) {
-      JOptionPane.showMessageDialog(null, "Internal error: IOException while opening cache");
       return false;
     }
+    StringBuilder sb = new StringBuilder();
     try {
-      Object inpObj = ois.readObject();
-      try {
-        collection = (HashMap<String, Card>) inpObj;
-      } catch (ClassCastException e) {
-        JOptionPane.showMessageDialog(null, "Internal error: Cast exception while reading cache");
+      String line = fr.readLine();
+      while (line != null) {
+        sb.append(line);
+        line = fr.readLine();
       }
-    } catch (ClassNotFoundException e) {
-      JOptionPane.showMessageDialog(null, "Internal error: ClassNotFound while reading cache");
-      return false;
     } catch (IOException e) {
-      JOptionPane.showMessageDialog(null, "Internal error: IOException while reading cache");
       return false;
+    }
+    JSONObject cached = new JSONObject(sb.toString());
+    JSONArray cardArray = cached.getJSONArray("data");
+    for (int i = 0; i < cardArray.length(); i++) {
+      JSONObject jcard = cardArray.getJSONObject(i);
+      String cardName = jcard.getString("name");
+      int count = jcard.getInt("count");
+      String set = jcard.getString("set");
+      String image = jcard.getString("image");
+      if (collection.keySet().contains(cardName)) {
+        collection.get(cardName).addSet(set, count, image);
+      } else {
+        Map<String, Integer> newSets = new HashMap<>();
+        newSets.put(set, count);
+        Map<String, String> newURLs = new HashMap<>();
+        newURLs.put(set, image);
+        Card card = new Card(cardName, newSets, newURLs, defaultImage);
+        collection.put(cardName, card);
+      }
     }
     return true;
+  }
+
+  boolean inCollection(String cardName) {
+    return collection.keySet().contains(cardName);
+  }
+
+  Card getCard(String cardName) {
+    return collection.get(cardName);
   }
 }

@@ -1,8 +1,5 @@
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.LinkedList;
 
 // Maintains a list of criteria added from the StatSelector. This panel also
@@ -44,7 +41,8 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
       pbFrame.add(pb, BorderLayout.CENTER);
       pbFrame.pack();
       pbFrame.setVisible(true);
-      Task task = new Task(pbFrame);
+      man.setUsername(usernameField.getText());
+      LoadCollectionTask task = new LoadCollectionTask(pbFrame, man);
       task.addPropertyChangeListener(e2 -> {
         if ("progress".equals(e2.getPropertyName())) {
           pb.setValue((Integer) e2.getNewValue());
@@ -78,40 +76,14 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
 
   @Override
   public String createQuery() {
-    StringBuilder ret = new StringBuilder("");
+    StringBuilder ret = new StringBuilder();
     for (String s : searchStrings) {
       ret.append(s).append(" ");
     }
     return ret.toString().trim();
   }
 
-  // This task loads the user's collection
-  private class Task extends SwingWorker<Boolean, Void> {
-    private JFrame frame;
-
-    Task(JFrame frame) {
-      this.frame = frame;
-    }
-
-    @Override
-    protected Boolean doInBackground() {
-      int i = 0;
-      int pages = 1;
-      while (pages != 0) {
-        File dir = new File("cache");
-        if (!dir.exists()) {
-          dir.mkdir();
-        }
-        pages = man.loadCollection(usernameField.getText(), i);
-        setProgress((i * 100) / pages);
-        i++;
-      }
-      return true;
-    }
-
-    @Override
-    protected void done() {
-      frame.dispose();
-    }
+  String getUsername() {
+    return usernameField.getText();
   }
 }
