@@ -61,7 +61,6 @@ class MainPanel extends JPanel {
     JButton submit = new JButton("Submit");
     submit.addActionListener(e -> {
       ResultsFrame rf = new ResultsFrame(createQuery(), man);
-      rf.setVisible(false);
       man.setUsername(critPanel.getUsername());
       boolean prepared = rf.prepare();
       if (prepared) {

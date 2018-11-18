@@ -143,6 +143,10 @@ class CollectionManager {
       }
       topLevel.put("data", data);
       try {
+        File dir = new File("cache");
+        if (!dir.exists()) {
+          dir.mkdir();
+        }
         String fn = "cache/" + username;
         FileWriter fw = new FileWriter(fn);
         fw.write(topLevel.toString());

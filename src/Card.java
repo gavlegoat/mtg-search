@@ -9,11 +9,83 @@ import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 // Defines a magic card including information about how many are in a user's
 // collection.
 class Card {
+  private static Map<String, File> cardImages;
+
+  static void loadImageCache() {
+    cardImages = new HashMap<>();
+
+    File dir = new File("cache");
+    if (!dir.exists()) {
+      // No images are cached
+      return;
+    }
+    File imageDir = new File("cache/images");
+    if (!imageDir.exists()) {
+      return;
+    }
+    File cache = new File("cache/images/saved_images");
+    if (!cache.exists()) {
+      return;
+    }
+    BufferedReader fr;
+    try {
+      fr = new BufferedReader(new FileReader(cache));
+    } catch (FileNotFoundException e) {
+      return;
+    }
+    StringBuilder sb = new StringBuilder();
+    try {
+      String line = fr.readLine();
+      while (line != null) {
+        sb.append(line);
+        line = fr.readLine();
+      }
+    } catch (IOException e) {
+      return;
+    }
+    JSONObject cached = new JSONObject(sb.toString());
+    JSONArray cardArray = cached.getJSONArray("data");
+    for (int i = 0; i < cardArray.length(); i++) {
+      JSONObject c = cardArray.getJSONObject(i);
+      String name = c.getString("name");
+      String imageFileName = c.getString("image");
+      File imageFile = new File("cache/images/" + imageFileName);
+      if (imageFile.exists()) {
+        cardImages.put(name, imageFile);
+      }
+    }
+  }
+
+  static void saveImageCache() {
+    JSONObject topLevel = new JSONObject();
+    JSONArray data = new JSONArray();
+    for (String k : cardImages.keySet()) {
+      JSONObject c = new JSONObject();
+      c.put("name", k);
+      c.put("image", cardImages.get(k).getName());
+      data.put(c);
+    }
+    topLevel.put("data", data);
+    File dir = new File("cache");
+    if (!dir.exists()) {
+      dir.mkdir();
+    }
+    File cacheFile = new File("cache/images/saved_images");
+    try {
+      FileWriter fw = new FileWriter(cacheFile);
+      fw.write(topLevel.toString());
+      fw.close();
+    } catch (IOException e) {
+      // Failed to save image cache
+    }
+  }
+
   private String name;
   // sets maps set codes to the number of cards with this name which are in that
   // set
@@ -46,6 +118,17 @@ class Card {
     if (loaded) {
       // The image has already been loaded
       return;
+    }
+    if (cardImages.containsKey(name)) {
+      // This image is in our cache
+      File imageFile = cardImages.get(name);
+      try {
+        image = ImageIO.read(imageFile);
+        loaded = true;
+        return;
+      } catch (IOException e) {
+        // Couldn't load from cache, continue to load from Scryfall
+      }
     }
     BufferedImage original;
     String url = imageURLs.get(imageURLs.keySet().iterator().next());
@@ -82,7 +165,28 @@ class Card {
       return;
     }
 
-    image = original.getScaledInstance(366, 510, Image.SCALE_DEFAULT);
+    image = original.getScaledInstance(ResultsFrame.CARD_WIDTH, ResultsFrame.CARD_HEIGHT, Image.SCALE_SMOOTH);
+    // Add this image to the cache for future runs
+    File dir = new File("cache");
+    if (!dir.exists()) {
+      dir.mkdir();
+    }
+    File imageDir = new File("cache/images");
+    if (!imageDir.exists()) {
+      imageDir.mkdir();
+    }
+    String imageFileName = "cache/images/" + name.replace(" ", "") + ".jpg";
+    BufferedImage bi = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
+    Graphics g = bi.getGraphics();
+    g.drawImage(image, 0, 0, null);
+    g.dispose();
+    try {
+      File imageFile = new File(imageFileName);
+      ImageIO.write(bi, "jpg", imageFile);
+      cardImages.put(name, imageFile);
+    } catch (IOException e) {
+      // Failed to save this image
+    }
     loaded = true;
   }
 

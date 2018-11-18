@@ -14,6 +14,10 @@ import java.util.List;
 
 // Holds the results of a search
 class ResultsFrame extends JFrame {
+  // Original image size: 488 x 680
+  static final int CARD_WIDTH = 244;
+  static final int CARD_HEIGHT = 340;
+
   private CollectionManager man;
   private String queryStr;
   private String nextPageURL;
@@ -28,6 +32,8 @@ class ResultsFrame extends JFrame {
     man = cm;
     queryStr = q;
 
+    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
     setLayout(new BorderLayout());
     rp = new ResultsPanel();
     add(rp, BorderLayout.CENTER);
@@ -36,13 +42,16 @@ class ResultsFrame extends JFrame {
     controlPanel.setLayout(new GridLayout(1, 2));
 
     prevButton = new JButton("< Previous");
-    prevButton.addActionListener(e -> setContents(offset - rp.numCards()));
+    prevButton.addActionListener(e -> setContents(offset - ResultsPanel.ROWS * ResultsPanel.COLS));
     controlPanel.add(prevButton);
 
     nextButton = new JButton("Next >");
     nextButton.setEnabled(false);
-    nextButton.addActionListener(e -> setContents(offset + rp.numCards()));
+    nextButton.addActionListener(e -> setContents(offset + ResultsPanel.ROWS * ResultsPanel.COLS));
     controlPanel.add(nextButton);
+
+    add(controlPanel, BorderLayout.SOUTH);
+    pack();
   }
 
   boolean prepare() {
@@ -91,7 +100,7 @@ class ResultsFrame extends JFrame {
 
   boolean setContents(int off) {
     offset = off;
-    while (results.size() < offset + rp.numCards() && !nextPageURL.equals("")) {
+    while (results.size() < offset + ResultsPanel.ROWS * ResultsPanel.COLS && !nextPageURL.equals("")) {
       // We need to load more results
       JSONObject obj = loadPage(nextPageURL);
       JSONArray cards = obj.getJSONArray("data");
@@ -117,7 +126,7 @@ class ResultsFrame extends JFrame {
       prevButton.setEnabled(true);
     }
 
-    if (offset + rp.numCards() >= results.size()) {
+    if (offset + ResultsPanel.COLS * ResultsPanel.ROWS >= results.size()) {
       nextButton.setEnabled(false);
     } else {
       nextButton.setEnabled(true);
@@ -178,33 +187,32 @@ class ResultsFrame extends JFrame {
     return new JSONObject(content);
   }
 
-  private class ResultsPanel extends JScrollPane {
-    private int rows;
-    private int cols;
+  private class ResultsPanel extends JPanel {
+    static final int ROWS = 10;
+    static final int COLS = 4;
     private JPanel display;
     private CardPanel[] displayedCards;
 
     ResultsPanel() {
-      rows = 10;
-      cols = 4;
+      setLayout(new FlowLayout());
 
       display = new JPanel();
-      display.setLayout(new GridLayout(rows, cols));
+      display.setLayout(new GridLayout(ROWS, COLS));
 
-      displayedCards = new CardPanel[rows * cols];
-      for (int i = 0; i < rows * cols; i++) {
+      displayedCards = new CardPanel[ROWS * COLS];
+      for (int i = 0; i < ROWS * COLS; i++) {
         displayedCards[i] = new CardPanel();
-        add(displayedCards[i]);
+        display.add(displayedCards[i]);
       }
-    }
 
-    // Return the number of cards that can be displayed at once
-    int numCards() {
-      return rows * cols;
+      JScrollPane scrollPane = new JScrollPane(display);
+      scrollPane.setPreferredSize(new Dimension(COLS * CARD_WIDTH + 20, 800));
+      scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+      add(scrollPane);
     }
 
     void setContent(int off) {
-      for (int i = 0; i < rows * cols; i++) {
+      for (int i = 0; i < ROWS * COLS; i++) {
         if (off + i >= results.size()) {
           displayedCards[i].setCard(null);
         } else {
@@ -220,7 +228,9 @@ class ResultsFrame extends JFrame {
 
     CardPanel() {
       cardImage = new JLabel();
-      cardImage.setSize(366, 510);
+      cardImage.setSize(CARD_WIDTH, CARD_HEIGHT);
+      setPreferredSize(new Dimension(CARD_WIDTH, CARD_HEIGHT));
+      add(cardImage);
     }
 
     void setCard(Card card) {
