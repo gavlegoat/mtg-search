@@ -13,7 +13,7 @@ public class LoadCollectionTask extends SwingWorker<Boolean, Void> {
 
   @Override
   protected Boolean doInBackground() {
-    int i = 0;
+    int i = 1;
     int pages = 1;
     while (pages != 0) {
       File dir = new File("cache");

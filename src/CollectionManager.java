@@ -115,7 +115,17 @@ class CollectionManager {
       String cardName = card.getString("name");
       String setName = card.getString("set");
       int count = card.getInt("count");
-      String imageURL = card.getJSONObject("images").getString("large");
+      String imageURL = "";
+      if (card.has("images")) {
+        imageURL = card.getJSONObject("images").getString("large");
+      } else {
+        // the deckbox api doesn't return image URL's for DFC's so we need to
+        // find them separately
+        String set = card.getString("set");
+        String edition = card.getJSONObject("edition").getString("name");
+        String number = edition.replaceAll("[^\\d]", "");
+        imageURL = getImageFromScryfall(set, number);
+      }
       if (collection.containsKey(cardName)) {
         collection.get(cardName).addSet(setName, count, imageURL);
       } else {
@@ -158,6 +168,64 @@ class CollectionManager {
       return 0;
     } else {
       return pages;
+    }
+  }
+
+  private String getImageFromScryfall(String set, String number) {
+    String charset = StandardCharsets.UTF_8.name();
+    String url = "https://api.scryfall.com/cards/" + set + "/" + number;
+    HttpURLConnection con;
+    try {
+      con = (HttpURLConnection) (new URL(url).openConnection());
+    } catch (MalformedURLException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: Bad URL");
+      return null;
+    } catch (IOException e) {
+      return null;
+    }
+    try {
+      con.setRequestMethod("GET");
+    } catch (ProtocolException e) {
+      JOptionPane.showMessageDialog(null, "Internal error: Protocol error");
+      return null;
+    }
+    con.setRequestProperty("Accept-Charset", charset);
+    try {
+      con.connect();
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "An error occured while connecting to Scryfall");
+      return null;
+    }
+    int responseCode;
+    try{
+      responseCode = con.getResponseCode();
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "An error occured while reading the response from Scryfall");
+      return null;
+    }
+    if (responseCode != HttpURLConnection.HTTP_OK) {
+      JOptionPane.showMessageDialog(null, "Error while connecting to Scryfall: " + responseCode);
+      return null;
+    }
+    String content;
+    try {
+      BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+      StringBuilder sb = new StringBuilder();
+      String inputLine = in.readLine();
+      while (inputLine != null) {
+        sb.append(inputLine);
+        inputLine = in.readLine();
+      }
+      content = sb.toString();
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(null, "An error occured while reading the response from Scryfall");
+      return null;
+    }
+    JSONObject topLevel = new JSONObject(content);
+    if (topLevel.has("card_faces")) {
+      return topLevel.getJSONArray("card_faces").getJSONObject(0).getJSONObject("image_uris").getString("large");
+    } else {
+      return topLevel.getJSONObject("image_uris").getString("large");
     }
   }
 
