@@ -1,12 +1,12 @@
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.util.LinkedList;
 
 // Maintains a list of criteria added from the StatSelector. This panel also
 // holds the username entry and collection loading elements.
 public class CriteriaPanel extends JPanel implements ScryfallConstraint {
   private JProgressBar pb;
-  private JTextField usernameField;
   private java.util.List<String> searchStrings;
   private CollectionManager man;
 
@@ -21,13 +21,6 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
 
     searchStrings = new LinkedList<>();
 
-    JPanel usernamePanel = new JPanel(new FlowLayout());
-    usernamePanel.add(new JLabel("Deckbox Username:"));
-    usernameField = new JTextField();
-    usernameField.setColumns(20);
-    usernamePanel.add(usernameField);
-    add(usernamePanel);
-
     setPreferredSize(new Dimension(300, 800));
     setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 
@@ -41,8 +34,9 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
       pbFrame.add(pb, BorderLayout.CENTER);
       pbFrame.pack();
       pbFrame.setVisible(true);
-      man.setUsername(usernameField.getText());
-      LoadCollectionTask task = new LoadCollectionTask(pbFrame, man);
+      JFileChooser fileChooser = new JFileChooser();
+      fileChooser.showOpenDialog(this);
+      LoadCollectionTask task = new LoadCollectionTask(pbFrame, man, fileChooser.getSelectedFile());
       task.addPropertyChangeListener(e2 -> {
         if ("progress".equals(e2.getPropertyName())) {
           pb.setValue((Integer) e2.getNewValue());
@@ -83,7 +77,9 @@ public class CriteriaPanel extends JPanel implements ScryfallConstraint {
     return ret.toString().trim();
   }
 
+  /*
   String getUsername() {
     return usernameField.getText();
   }
+  */
 }

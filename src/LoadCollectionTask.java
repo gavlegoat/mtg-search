@@ -5,26 +5,18 @@ import java.io.File;
 public class LoadCollectionTask extends SwingWorker<Boolean, Void> {
   private JFrame frame;
   private CollectionManager man;
+  private File file;
 
-  LoadCollectionTask(JFrame frame, CollectionManager m) {
+  LoadCollectionTask(JFrame frame, CollectionManager m, File file) {
     this.frame = frame;
     man = m;
+    this.file = file;
   }
 
   @Override
   protected Boolean doInBackground() {
-    int i = 1;
-    int pages = 1;
-    while (pages != 0) {
-      File dir = new File("cache");
-      if (!dir.exists()) {
-        dir.mkdir();
-      }
-      pages = man.loadCollection(i);
-      setProgress((i * 100) / pages);
-      i++;
-    }
-    return true;
+    int finished = man.loadCollection(file);
+    return finished != 0;
   }
 
   @Override

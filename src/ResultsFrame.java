@@ -55,8 +55,7 @@ class ResultsFrame extends JFrame {
   }
 
   boolean prepare() {
-    boolean loaded = man.loadLocal();
-    if (!loaded) {
+    if (!man.isLoaded()) {
       JProgressBar pb = new JProgressBar(0, 100);
       pb.setValue(0);
       pb.setStringPainted(true);
@@ -67,7 +66,9 @@ class ResultsFrame extends JFrame {
       pbFrame.add(pb, BorderLayout.CENTER);
       pbFrame.pack();
       pbFrame.setVisible(true);
-      LoadCollectionTask task = new LoadCollectionTask(pbFrame, man);
+      JFileChooser fc = new JFileChooser();
+      fc.showOpenDialog(this);
+      LoadCollectionTask task = new LoadCollectionTask(pbFrame, man, fc.getSelectedFile());
       task.addPropertyChangeListener(e2 -> {
         if ("progress".equals(e2.getPropertyName())) {
           pb.setValue((Integer) e2.getNewValue());
@@ -79,6 +80,7 @@ class ResultsFrame extends JFrame {
         task.get();
       } catch (Exception e) {
         JOptionPane.showMessageDialog(null, "Failed to load collection");
+        return false;
       }
     }
     // Send the search to Scryfall
