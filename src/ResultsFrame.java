@@ -193,6 +193,7 @@ class ResultsFrame extends JFrame {
     static final int ROWS = 10;
     static final int COLS = 4;
     private JPanel display;
+    private JScrollPane scrollPane;
     private CardPanel[] displayedCards;
 
     ResultsPanel() {
@@ -207,7 +208,7 @@ class ResultsFrame extends JFrame {
         display.add(displayedCards[i]);
       }
 
-      JScrollPane scrollPane = new JScrollPane(display);
+      scrollPane = new JScrollPane(display);
       scrollPane.setPreferredSize(new Dimension(COLS * CARD_WIDTH + 20, 800));
       scrollPane.getVerticalScrollBar().setUnitIncrement(16);
       add(scrollPane);
@@ -221,6 +222,7 @@ class ResultsFrame extends JFrame {
           displayedCards[i].setCard(results.get(off + i));
         }
       }
+      scrollPane.getVerticalScrollBar().setValue(0);
     }
   }
 

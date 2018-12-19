@@ -43,7 +43,9 @@ class Card {
     try {
       String line = fr.readLine();
       while (line != null) {
-        sb.append(line);
+        if (!line.contains("/")) {
+          sb.append(line);
+        }
         line = fr.readLine();
       }
     } catch (IOException e) {
@@ -66,6 +68,9 @@ class Card {
     JSONObject topLevel = new JSONObject();
     JSONArray data = new JSONArray();
     for (String k : cardImages.keySet()) {
+      if (k.contains("/")) {
+        continue;
+      }
       JSONObject c = new JSONObject();
       c.put("name", k);
       c.put("image", cardImages.get(k).getName());
@@ -122,12 +127,15 @@ class Card {
     if (cardImages.containsKey(name)) {
       // This image is in our cache
       File imageFile = cardImages.get(name);
-      try {
-        image = ImageIO.read(imageFile);
-        loaded = true;
-        return;
-      } catch (IOException e) {
-        // Couldn't load from cache, continue to load from Scryfall
+      if (!imageFile.toString().contains("/")) {
+        // We don't try to deal with split cards for now
+        try {
+          image = ImageIO.read(imageFile);
+          loaded = true;
+          return;
+        } catch (IOException e) {
+          // Couldn't load from cache, continue to load from Scryfall
+        }
       }
     }
     BufferedImage original;
@@ -176,16 +184,18 @@ class Card {
       imageDir.mkdir();
     }
     String imageFileName = "cache/images/" + name.replace(" ", "") + ".jpg";
-    BufferedImage bi = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
-    Graphics g = bi.getGraphics();
-    g.drawImage(image, 0, 0, null);
-    g.dispose();
-    try {
-      File imageFile = new File(imageFileName);
-      ImageIO.write(bi, "jpg", imageFile);
-      cardImages.put(name, imageFile);
-    } catch (IOException e) {
-      // Failed to save this image
+    if (!imageFileName.contains("/")) {
+      BufferedImage bi = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
+      Graphics g = bi.getGraphics();
+      g.drawImage(image, 0, 0, null);
+      g.dispose();
+      try {
+        File imageFile = new File(imageFileName);
+        ImageIO.write(bi, "jpg", imageFile);
+        cardImages.put(name, imageFile);
+      } catch (IOException e) {
+        // Failed to save this image
+      }
     }
     loaded = true;
   }

@@ -16,9 +16,30 @@ public class Main {
         super.windowClosing(e);
       }
     });
-    frame.setContentPane(new MainPanel());
+    frame.setContentPane(new MainScroller());
     frame.pack();
-    frame.setResizable(false);
+    frame.setResizable(true);
     frame.setVisible(true);
+  }
+
+  private static class MainScroller extends JPanel {
+    MainScroller() {
+      setLayout(new BorderLayout());
+
+      MainPanel mp = new MainPanel();
+
+      JScrollPane scrollPane = new JScrollPane(
+              mp,
+              JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+              JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+      int horiz = mp.getPreferredSize().width +
+              scrollPane.getVerticalScrollBar().getMaximumSize().width;
+      int vert = mp.getPreferredSize().height +
+              scrollPane.getHorizontalScrollBar().getMaximumSize().height;
+      scrollPane.setPreferredSize(new Dimension(horiz, vert));
+      scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+      scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+      add(scrollPane);
+    }
   }
 }

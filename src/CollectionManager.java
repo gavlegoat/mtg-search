@@ -18,7 +18,8 @@ class CollectionManager {
     collection = new HashMap<>();
     loaded = false;
     try {
-      BufferedImage original = ImageIO.read(new File("src/unh-17-look-at-me-i-m-r-d.jpg"));
+      BufferedImage original = ImageIO.read(getClass().getResourceAsStream("unh-17-look-at-me-i-m-r-d.jpg"));
+      //BufferedImage original = ImageIO.read(new File("resources/unh-17-look-at-me-i-m-r-d.jpg"));
       defaultImage = original.getScaledInstance(366, 510, Image.SCALE_DEFAULT);
     } catch (IOException e) {
       JOptionPane.showMessageDialog(null, "Internal error: Failed to load the default image");
